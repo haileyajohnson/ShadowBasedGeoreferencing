@@ -12,16 +12,28 @@ shadow_mask = getShadows(aerial, shadow_threshhold);
 az = -19.3;
 elev = 39;
 
+%% parameterize camera position
+horz_shift = 0;
+vert_shift = 0;
+rotate = 0;
+dx = 0;
+dy = 0;
+dz = 100;
 
-%% 
-% zoom: ratio of pixels to points
-% translate: which point matches which pizel
-% rotate: imTransform
+params0 = [horz_shift, vert_shift, rotate, dx, dy, dz];
 
-%% set up view
+%% minimize cost function
+ObjectiveFunction = @(params) costFunction(params, pt_cld, aerial, az, elev);
+[params,fval] = simulannealbnd(ObjectiveFunction, params0);
+
+%% render model
 warp(x_grid, y_grid, z_grid, aerial);
 set(gca, 'XColor', 'none', 'YColor', 'none', 'ZColor', 'none');
 axis equal
 view(az, elev)
 F = getframe;
 I = frame2im(F);
+
+%% TODO
+% loop optimization
+% input guesses for starting params

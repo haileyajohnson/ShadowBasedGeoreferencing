@@ -1,5 +1,0 @@
-function cost = costFunction(params, x_grid, y_grid, z_grid, im, az, elev)
-
-new
-end
-
