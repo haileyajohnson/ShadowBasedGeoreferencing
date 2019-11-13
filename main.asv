@@ -1,0 +1,27 @@
+%% load lidar
+load('trimmed_lidar.mat');
+
+%% load image
+aerial = imread('gnv_aerial.jpg');
+
+%% get shadow mask
+shadow_threshhold = 0.4;
+shadow_mask = getShadows(aerial, shadow_threshhold);
+
+%% get sun position
+az = -19.3;
+elev = 39;
+
+
+%% 
+% zoom: ratio of pixels to points
+% translate: which point matches which pizel
+% rotate: imTransform
+
+%% set up view
+warp(x_grid, y_grid, z_grid, aerial);
+set(gca, 'XColor', 'none', 'YColor', 'none', 'ZColor', 'none');
+axis equal
+view(az, elev)
+F = getframe;
+I = frame2im(F);
