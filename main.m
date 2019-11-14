@@ -1,34 +1,48 @@
+%% close and clear
+close all; clear all;
+
+%% add path
+datapath = genpath('data');
+addpath('functions', datapath);
+
 %% load lidar
-load('trimmed_lidar.mat');
+load('stadium.mat');
 
 %% load image
-aerial = imread('gnv_aerial.jpg');
+load('cropped_im.mat');
+im = cropped;
 
 %% get sun position
-az = -19.3;
-elev = 39;
+% az = -19.3; % full gnv aerial
+% elev = 39;
+
+az = 83.75;  % stadium aerial
+elev = 30.63; 
 
 %% parameterize camera position
-horz_shift = 0;
-vert_shift = 0;
-rotate = 0;
-dx = 0;
-dy = 0;
-dz = 100;
+scale = 1; % ratio of picture/lidar
+xshift = 0; % horizontal shift in number of lidar points
+yshift = 0; % vertical shift in number of lidar points
+pitch = 0; % rotation around x
+heading = 0; % rotation around y
+roll = 0; % rotation around z
 
-params0 = [horz_shift, vert_shift, rotate, dx, dy, dz];
+xrange = size(xg, 2);
+yrange = size(yg, 1);
+
+params0 = [scale, xshift, yshift, roll];
+% lb = [1/4, -xrange/4, -yrange/4, -180];
+% ub = [1, xrange/4, yrange/4, 180];
+lb = [-1 -1 -1 -1];
+ub = [1 1 1 1];
 
 %% minimize cost function
-ObjectiveFunction = @(params) costFunction(params, pt_cld, aerial, az, elev);
-[params,fval] = simulannealbnd(ObjectiveFunction, params0);
+ObjectiveFunction = @(params) costFunction(params, xg, yg, zg, im, az, elev);
+[params,fval] = anneal(ObjectiveFunction, params0);
+%[params,fval] = simulannealbnd(ObjectiveFunction, params0, lb, ub);
 
 %% render model
-% warp(x_grid, y_grid, z_grid, aerial);
-% set(gca, 'XColor', 'none', 'YColor', 'none', 'ZColor', 'none');
-% axis equal
-% view(az, elev)
-% F = getframe;
-% I = frame2im(F);
+displaySolution(params, xg, yg, zg, im, az, elev);
 
 %% TODO
 % loop optimization

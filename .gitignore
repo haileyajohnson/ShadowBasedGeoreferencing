@@ -1,2 +1,9 @@
 # ignore autosave
+*.asv
 **/*.asv
+
+
+# ignore too big files
+data/lidar/full_stadium.mat
+data/lidar/stadium.las
+data/images/stadium_cropped.png

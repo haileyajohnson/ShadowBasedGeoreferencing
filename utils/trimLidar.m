@@ -12,6 +12,17 @@ x = arr(:, 1);
 y = arr(:, 2);
 z = arr(:, 3);
 
+i = find(x<minx | x>maxx | y<miny | y>maxy);
+
+x(i) = [];
+y(i) = [];
+z(i) = [];
+
+pt_cld = [x, y, z];
+
+pcshow(pt_cld);
+
+
 dx = linspace(minx, maxx, 1000); 
 dy = linspace(miny, maxy, 1000); 
 [xq,yq] = meshgrid(dx,dy);

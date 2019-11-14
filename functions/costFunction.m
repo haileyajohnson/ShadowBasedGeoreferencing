@@ -1,72 +1,67 @@
-function cost = costFunction(params, pt_cld, im, az, elev)
-%% get function params
-horz_shift = params(1);
-vert_shift = params(2);
-rotate = params(3);
-cam_pos = params(4:6);
+function cost = costFunction(params, xg, yg, zg, im, az, elev)
+%% get function params and scale
+xrange = size(xg, 2);
+yrange = size(yg, 1);
+% 
+% scale = params(1);
+% xshift = params(2);
+% yshift = params(3);
+% roll = params(4);
 
-%% get points visible from camera position
-vis = HPR(pt_cld, cam_pos, 1);
-vis_pt_cld = pt_cld(vis, :);
+scale = params(1)*(.75/2) + (.75/2) + .25;
+xshift = floor(params(2) * xrange);
+yshift = floor(params(3) * yrange);
+roll = params(4) * 180;
 
-%% regrid
-x = vis_pt_cld(:, 1);
-y = vis_pt_cld(:, 2);
-z = vis_pt_cld(:, 3);
-
-dx = linspace(min(x), max(x), 1000); 
-dy = linspace(min(y), max(y), 1000); 
-[xg,yg] = meshgrid(dx,dy);
-
-zg = griddata(x,y,z,xg,yg);
 
 %% shift image
-if horz_shift > 0
-    xg = xg(:, 1+horz_shift:end);
-    yg = yg(:, 1+horz_shift:end);
-    zg = zg(:, 1+horz_shift:end);
-else
-    xg = xg(:, 1:end+horz_shift);
-    yg = yg(:, 1:end+horz_shift);
-    zg = zg(:, 1:end+horz_shift);
+% invalid arrangement if shift pushes image outside bounds of lidar
+% invalid if non-integer shift
+if (abs(xshift/xrange) > scale) || (abs(yshift/yrange) > scale)
+    cost = rand()+1;
+    disp(cost)
+    return;
 end
-    
-if vert_shift > 0
-    xg = xg(1+vert_shift:end, :);
-    yg = yg(1+vert_shift:end, :);
-    zg = zg(1+vert_shift:end, :);
-else
-    xg = xg(1:end+vert_shift, :);
-    yg = yg(1:end+vert_shift, :);
-    zg = zg(1:end+vert_shift, :);
-end
+xcenter = floor(xrange/2) + round(xshift);
+ycenter = floor(yrange/2) + round(yshift);
 
 %% rotate image
-rot_im = imrotate(double(im), rotate, 'loose');
-mrot = ~imrotate(true(size(double(im))), rotate, 'loose');
-rot_im(mrot&~imclearborder(mrot)) = nan;
+rot_im = imrotate((im), roll, 'loose');
+
+%% scale image
+numpointsx = floor((size(xg, 2) * scale)/2);
+numpointsy = floor((size(yg, 1) * scale)/2);
+xtrim = xg(max(ycenter-numpointsy, 1):min(ycenter+numpointsy, yrange),...
+    max(xcenter-numpointsx, 1):min(xcenter+numpointsx, xrange));
+ytrim = yg(max(ycenter-numpointsy, 1):min(ycenter+numpointsy, yrange),...
+    max(xcenter-numpointsx, 1):min(xcenter+numpointsx, xrange));
+ztrim = zg(max(ycenter-numpointsy, 1):min(ycenter+numpointsy, yrange),...
+    max(xcenter-numpointsx, 1):min(xcenter+numpointsx, xrange));
+% set min threshold of textured points
+[h, w] = size(xtrim);
+if (h*w) < .5*(xrange*yrange)
+    cost = rand()+1;
+    disp(cost)
+    return;
+end
 
 %% create texture mapping
-warp(xg, yg, zg, rot_im);
+warp(xtrim, ytrim, ztrim, rot_im);
 set(gca, 'XColor', 'none', 'YColor', 'none', 'ZColor', 'none');
 axis equal
 view(az, elev)
 F = getframe;
 viewIm = frame2im(F);
-close
 
-%% get cost of view im
-t = .5 * length(vis); % set min threshold of textured points
-num_textured_points = length(squeeze(sum(~isnan(viewIm))));
-if num_textured_points < t
-    cost = 1;
-else
-    % get shadow mask
-    shadow_threshhold = 0.4;
-    shadow_mask = getShadows(viewIm, shadow_threshhold);
-    num_shadowed_points = sum(sum(shadow_mask));
-    cost = num_shadowed_points/num_textured_points;
-end
+%% get cost of view im 
+num_textured_points = sum(sum(sum(viewIm, 3) > 0));
+% get shadow mask
+shadow_threshhold = 0.15;
+shadow_mask = getShadows(viewIm, shadow_threshhold);
+num_shadowed_points = sum(sum(shadow_mask));
+cost = num_shadowed_points/num_textured_points;
+
+disp(cost);
 
 end
 
