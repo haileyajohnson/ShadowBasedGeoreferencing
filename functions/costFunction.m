@@ -17,11 +17,11 @@ roll = params(4) * 180;
 %% shift image
 % invalid arrangement if shift pushes image outside bounds of lidar
 % invalid if non-integer shift
-if (abs(xshift/xrange) > scale) || (abs(yshift/yrange) > scale)
-    cost = rand()+1;
-    disp(cost)
-    return;
-end
+% if (abs(xshift/xrange) > scale) || (abs(yshift/yrange) > scale)
+%     cost = rand()+1;
+%     disp(cost)
+%     return;
+% end
 xcenter = floor(xrange/2) + round(xshift);
 ycenter = floor(yrange/2) + round(yshift);
 
@@ -38,12 +38,12 @@ ytrim = yg(max(ycenter-numpointsy, 1):min(ycenter+numpointsy, yrange),...
 ztrim = zg(max(ycenter-numpointsy, 1):min(ycenter+numpointsy, yrange),...
     max(xcenter-numpointsx, 1):min(xcenter+numpointsx, xrange));
 % set min threshold of textured points
-[h, w] = size(xtrim);
-if (h*w) < .5*(xrange*yrange)
-    cost = rand()+1;
-    disp(cost)
-    return;
-end
+% [h, w] = size(xtrim);
+% if (h*w) < .5*(xrange*yrange)
+%     cost = rand()+1;
+%     disp(cost)
+%     return;
+% end
 
 %% create texture mapping
 warp(xtrim, ytrim, ztrim, rot_im);
@@ -53,12 +53,20 @@ view(az, elev)
 F = getframe;
 viewIm = frame2im(F);
 
+%% write to gif
+[imind,cm] = rgb2ind(viewIm,256); 
+filename = 'output.gif';
+if ~isfile(filename)
+  imwrite(imind,cm,filename,'gif', 'Loopcount',inf); 
+else 
+  imwrite(imind,cm,filename,'gif','WriteMode','append'); 
+end 
+
 %% get cost of view im 
 num_textured_points = sum(sum(sum(viewIm, 3) > 0));
-% get shadow mask
-shadow_threshhold = 0.15;
-shadow_mask = getShadows(viewIm, shadow_threshhold);
-num_shadowed_points = sum(sum(shadow_mask));
+% count shadow pixels
+bw = im2bw(viewIm, .9999);
+num_shadowed_points = sum(sum(bw));
 cost = num_shadowed_points/num_textured_points;
 
 disp(cost);
